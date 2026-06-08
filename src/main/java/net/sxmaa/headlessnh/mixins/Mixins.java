@@ -14,6 +14,13 @@ public enum Mixins implements IMixins {
             .addClientMixins(
                 "MinecraftMixin_StartGame"
             )),
+    JOIN_WORLD_ON_MAINMENU_LOAD_CMM(
+        new MixinBuilder()
+            .setPhase(Phase.LATE)
+            .addRequiredMod(TargetedMod.CUSTOM_MAIN_MENU)
+            .addClientMixins(
+                "GuiCustomMixin"
+            )),
     NOTIFY_OF_FINISHED_WORLD_LOAD(
         new MixinBuilder()
             .setPhase(Phase.EARLY)

@@ -9,7 +9,8 @@ import cpw.mods.fml.common.Loader;
 
 public enum TargetedMod implements ITargetMod {
 
-    ANGELICA("com.gtnewhorizons.angelica.loading.AngelicaTweaker", "angelica");
+    ANGELICA("com.gtnewhorizons.angelica.loading.AngelicaTweaker", "angelica"),
+    CUSTOM_MAIN_MENU("custommainmenu"),;
 
     private final TargetModBuilder builder;
     private final String id;

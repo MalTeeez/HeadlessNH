@@ -3,7 +3,7 @@ package net.sxmaa.headlessnh.mixins.early;
 import java.io.IOException;
 
 import net.minecraft.client.renderer.WorldRenderer;
-import net.sxmaa.headlessnh.HeadlessNH;
+import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,6 +16,6 @@ public class WorldRendererMixin {
 
     @Inject(method = "updateRenderer", at = @At("RETURN"))
     public void updateRenderer(CallbackInfo ci) throws IOException {
-        HeadlessNH.onWorldLoaded();
+        IntegrationTestController.onWorldLoaded();
     }
 }

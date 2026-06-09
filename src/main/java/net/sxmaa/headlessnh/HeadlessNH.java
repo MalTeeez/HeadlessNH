@@ -1,17 +1,7 @@
 package net.sxmaa.headlessnh;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.client.Minecraft;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.mixin.Unique;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -52,34 +42,5 @@ public class HeadlessNH {
     // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {
         proxy.serverStarting(event);
-    }
-
-    public static void onGameStarted() throws IOException {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc != null) {
-            File file = new File(Minecraft.getMinecraft().mcDataDir, ".mainmenu.headlessnh");
-            file.createNewFile();
-        }
-    }
-
-    public static void onWorldLoaded() throws IOException {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc != null && mc.theWorld != null) {
-            File file = new File(Minecraft.getMinecraft().mcDataDir, ".worldloaded.headlessnh");
-            file.createNewFile();
-        }
-    }
-
-    @Unique
-    public static final Queue<Runnable> mainThreadTasks = new ConcurrentLinkedQueue<>();
-
-    // to run on thread with opengl context
-    @Unique
-    public static void runOnMainThread(Runnable task) {
-        mainThreadTasks.add(task);
-    }
-
-    public static @Nullable Runnable pollForMainThreadTask() {
-        return mainThreadTasks.poll();
     }
 }

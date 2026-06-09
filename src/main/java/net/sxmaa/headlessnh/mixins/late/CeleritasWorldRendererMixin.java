@@ -2,7 +2,7 @@ package net.sxmaa.headlessnh.mixins.late;
 
 import java.io.IOException;
 
-import net.sxmaa.headlessnh.HeadlessNH;
+import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,6 +18,6 @@ public class CeleritasWorldRendererMixin {
     @Dynamic
     @Inject(method = "drawChunkLayer", at = @At("RETURN"))
     public void onDrawChunkLayer(CallbackInfo ci) throws IOException {
-        HeadlessNH.onWorldLoaded();
+        IntegrationTestController.onWorldLoaded();
     }
 }

@@ -5,13 +5,14 @@ import java.io.IOException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiCreateWorld;
+import net.minecraft.client.gui.GuiDisconnected;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSelectWorld;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.resources.I18n;
-import net.sxmaa.headlessnh.HeadlessNH;
+import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -21,9 +22,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin_StartGame {
-
-    @Unique
-    boolean headlessNH$triggeredMainMenu = false;
 
     @Unique
     boolean headlessNH$triggeredWorldSelection = false;
@@ -43,29 +41,28 @@ public class MinecraftMixin_StartGame {
     @Inject(method = "runTick", at = @At("HEAD"))
     public void headlessNH$drainTasks(CallbackInfo ci) {
         Runnable task;
-        while ((task = HeadlessNH.pollForMainThreadTask()) != null) {
+        while ((task = IntegrationTestController.pollForMainThreadTask()) != null) {
             task.run();
         }
     }
 
     @Inject(method = "startGame", at = @At("TAIL"))
     public void atStartedGame(CallbackInfo ci) throws IOException {
-        HeadlessNH.onGameStarted();
+        IntegrationTestController.onGameStarted();
     }
 
     @Inject(method = "displayGuiScreen", at = @At("TAIL"))
     public void changedScreen(GuiScreen guiScreenIn, CallbackInfo ci) {
         if (!Boolean.getBoolean("headlessnh.active")) return;
-        if (guiScreenIn instanceof GuiMainMenu mainMenu && !headlessNH$triggeredMainMenu) {
+        if (guiScreenIn instanceof GuiMainMenu mainMenu) {
             new Thread(() -> {
                 try {
                     Thread.sleep(500);
-                    headlessNH$triggeredMainMenu = true;
-                    if (Boolean.getBoolean("headlessnh.singleplayer")) {
-                        HeadlessNH.runOnMainThread(() -> mainMenu.actionPerformed(new GuiButton(1, 0, 0, null)));
-                    } else {
-                        HeadlessNH.runOnMainThread(() -> mainMenu.actionPerformed(new GuiButton(2, 0, 0, null)));
-                    }
+                    String action = IntegrationTestController.pollMainMenuAction();
+                    if (action == null) return;
+                    // Singleplayer is 1, Multiplayer is 2
+                    int buttonId = action.equals("singleplayer") ? 1 : 2;
+                    IntegrationTestController.runOnMainThread(() -> mainMenu.actionPerformed(new GuiButton(buttonId, 0, 0, null)));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -76,7 +73,7 @@ public class MinecraftMixin_StartGame {
                 try {
                     Thread.sleep(500);
                     headlessNH$triggeredWorldSelection = true;
-                    HeadlessNH.runOnMainThread(() -> selectWorld.actionPerformed(new GuiButton(3, 0, 0, null)));
+                    IntegrationTestController.runOnMainThread(() -> selectWorld.actionPerformed(new GuiButton(3, 0, 0, null)));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -90,7 +87,7 @@ public class MinecraftMixin_StartGame {
                         Thread.sleep(2500);
                     }
                     headlessNH$triggeredWorldCreation = true;
-                    HeadlessNH.runOnMainThread(() -> createWorld.actionPerformed(new GuiButton(0, 0, 0, null)));
+                    IntegrationTestController.runOnMainThread(() -> createWorld.actionPerformed(new GuiButton(0, 0, 0, null)));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -103,7 +100,7 @@ public class MinecraftMixin_StartGame {
                     if (!headlessNH$triggeredMultiplayerAddServer) {
                         Thread.sleep(500);
                         headlessNH$triggeredMultiplayerAddServer = true;
-                        HeadlessNH.runOnMainThread(() -> {
+                        IntegrationTestController.runOnMainThread(() -> {
                             multiplayer.field_146806_v = true;
                             multiplayer.field_146811_z = new ServerData(
                                 I18n.format("selectServer.defaultName", new Object[0]),
@@ -116,10 +113,27 @@ public class MinecraftMixin_StartGame {
                     if (!headlessNH$triggeredMultiplayerJoinServer) {
                         Thread.sleep(500);
                         headlessNH$triggeredMultiplayerJoinServer = true;
-                        HeadlessNH.runOnMainThread(() -> multiplayer.func_146790_a(0));
+                        IntegrationTestController.runOnMainThread(() -> multiplayer.func_146790_a(0));
                         Thread.sleep(250);
-                        HeadlessNH.runOnMainThread(() -> multiplayer.actionPerformed(multiplayer.field_146809_s));
+                        IntegrationTestController.runOnMainThread(() -> multiplayer.actionPerformed(multiplayer.field_146809_s));
                     }
+                } catch (InterruptedException e) {
+                    Thread.currentThread()
+                        .interrupt();
+                }
+            }).start();
+        } else if (guiScreenIn instanceof GuiDisconnected) {
+            new Thread(() -> {
+                try {
+                    Thread.sleep(1000);
+                    IntegrationTestController.onConnectionFailed();
+                    // Re-arm the join (without re-adding the server, to avoid duplicate list entries) in case we
+                    // retry, then return to the title screen so the menu flow drives the next step
+                    headlessNH$triggeredMultiplayer = false;
+                    headlessNH$triggeredMultiplayerJoinServer = false;
+                    IntegrationTestController.runOnMainThread(
+                        () -> Minecraft.getMinecraft()
+                            .displayGuiScreen(new GuiMainMenu()));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();

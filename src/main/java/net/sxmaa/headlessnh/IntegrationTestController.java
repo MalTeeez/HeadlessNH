@@ -23,6 +23,26 @@ public final class IntegrationTestController {
     public static final String MARKER_SERVER_LOADED = ".serverloaded.headlessnh";
     public static final String MARKER_WORLD_LOADED = ".worldloaded.headlessnh";
 
+    // Marker file names default to the constants above but can be overridden individually so an orchestrator can
+    // pick its own filenames.
+    private static String markerMainMenuName() {
+        return System.getProperty("headlessnh.marker.mainMenu", MARKER_MAIN_MENU);
+    }
+
+    private static String markerServerLoadedName() {
+        return System.getProperty("headlessnh.marker.serverLoaded", MARKER_SERVER_LOADED);
+    }
+
+    private static String markerWorldLoadedName() {
+        return System.getProperty("headlessnh.marker.worldLoaded", MARKER_WORLD_LOADED);
+    }
+
+    // Directory the marker files are written into; defaults to the Minecraft data dir when unset.
+    private static File markerDir(Minecraft mc) {
+        String configured = System.getProperty("headlessnh.markerDir");
+        return (configured != null && !configured.isEmpty()) ? new File(configured) : mc.mcDataDir;
+    }
+
     public enum Mode {
         SINGLEPLAYER,
         MULTIPLAYER,
@@ -114,7 +134,7 @@ public final class IntegrationTestController {
     public static void onGameStarted() throws IOException {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc != null) {
-            writeMarker(mc, MARKER_MAIN_MENU);
+            writeMarker(mc, markerMainMenuName());
         }
     }
 
@@ -124,7 +144,7 @@ public final class IntegrationTestController {
 
         // Not driving the menus: keep the original behaviour of signalling every world load.
         if (isActive()) {
-            writeMarker(mc, MARKER_WORLD_LOADED);
+            writeMarker(mc, markerWorldLoadedName());
             return;
         }
 
@@ -133,10 +153,10 @@ public final class IntegrationTestController {
                 if (!serverLoadHandled) {
                     serverLoadHandled = true;
                     if (mode() == Mode.COMBINED) {
-                        writeMarker(mc, MARKER_SERVER_LOADED);
+                        writeMarker(mc, markerServerLoadedName());
                         runOnMainThread(IntegrationTestController::disconnectAndAdvance);
                     } else {
-                        writeMarker(mc, MARKER_WORLD_LOADED);
+                        writeMarker(mc, markerWorldLoadedName());
                         stage = Stage.DONE;
                     }
                 }
@@ -144,7 +164,7 @@ public final class IntegrationTestController {
             case SINGLEPLAYER:
                 if (!singleplayerLoadHandled) {
                     singleplayerLoadHandled = true;
-                    writeMarker(mc, MARKER_WORLD_LOADED);
+                    writeMarker(mc, markerWorldLoadedName());
                     stage = Stage.DONE;
                 }
                 break;
@@ -168,7 +188,9 @@ public final class IntegrationTestController {
     }
 
     private static void writeMarker(Minecraft mc, String name) throws IOException {
-        new File(mc.mcDataDir, name).createNewFile();
+        File dir = markerDir(mc);
+        dir.mkdirs();
+        new File(dir, name).createNewFile();
     }
 
     private static final Queue<Runnable> MAIN_THREAD_TASKS = new ConcurrentLinkedQueue<>();

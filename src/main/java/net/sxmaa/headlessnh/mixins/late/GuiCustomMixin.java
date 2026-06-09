@@ -23,7 +23,8 @@ public class GuiCustomMixin {
                 Thread.sleep(500);
                 String action = IntegrationTestController.pollMainMenuAction();
                 if (action == null) return;
-                IntegrationTestController.runOnMainThread(() -> new ActionOpenGUI(action).perform(null, (GuiCustom) ((Object) this)));
+                IntegrationTestController
+                    .runOnMainThread(() -> new ActionOpenGUI(action).perform(null, (GuiCustom) ((Object) this)));
             } catch (InterruptedException e) {
                 Thread.currentThread()
                     .interrupt();

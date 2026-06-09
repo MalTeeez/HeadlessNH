@@ -101,12 +101,11 @@ public final class IntegrationTestController {
     public static void fail(String reason) {
         String message = "Integration test failed: " + reason;
         HeadlessNH.LOG.error(message);
-        runOnMainThread(() -> {
-            throw new Failure(message);
-        });
+        runOnMainThread(() -> { throw new Failure(message); });
     }
 
     public static final class Failure extends RuntimeException {
+
         Failure(String message) {
             super(message);
         }

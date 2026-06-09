@@ -62,7 +62,8 @@ public class MinecraftMixin_StartGame {
                     if (action == null) return;
                     // Singleplayer is 1, Multiplayer is 2
                     int buttonId = action.equals("singleplayer") ? 1 : 2;
-                    IntegrationTestController.runOnMainThread(() -> mainMenu.actionPerformed(new GuiButton(buttonId, 0, 0, null)));
+                    IntegrationTestController
+                        .runOnMainThread(() -> mainMenu.actionPerformed(new GuiButton(buttonId, 0, 0, null)));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -73,7 +74,8 @@ public class MinecraftMixin_StartGame {
                 try {
                     Thread.sleep(500);
                     headlessNH$triggeredWorldSelection = true;
-                    IntegrationTestController.runOnMainThread(() -> selectWorld.actionPerformed(new GuiButton(3, 0, 0, null)));
+                    IntegrationTestController
+                        .runOnMainThread(() -> selectWorld.actionPerformed(new GuiButton(3, 0, 0, null)));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -87,7 +89,8 @@ public class MinecraftMixin_StartGame {
                         Thread.sleep(2500);
                     }
                     headlessNH$triggeredWorldCreation = true;
-                    IntegrationTestController.runOnMainThread(() -> createWorld.actionPerformed(new GuiButton(0, 0, 0, null)));
+                    IntegrationTestController
+                        .runOnMainThread(() -> createWorld.actionPerformed(new GuiButton(0, 0, 0, null)));
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -115,7 +118,8 @@ public class MinecraftMixin_StartGame {
                         headlessNH$triggeredMultiplayerJoinServer = true;
                         IntegrationTestController.runOnMainThread(() -> multiplayer.func_146790_a(0));
                         Thread.sleep(250);
-                        IntegrationTestController.runOnMainThread(() -> multiplayer.actionPerformed(multiplayer.field_146809_s));
+                        IntegrationTestController
+                            .runOnMainThread(() -> multiplayer.actionPerformed(multiplayer.field_146809_s));
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread()

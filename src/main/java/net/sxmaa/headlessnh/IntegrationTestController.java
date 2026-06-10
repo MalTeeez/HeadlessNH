@@ -189,8 +189,12 @@ public final class IntegrationTestController {
 
     private static void writeMarker(Minecraft mc, String name) throws IOException {
         File dir = markerDir(mc);
-        dir.mkdirs();
-        new File(dir, name).createNewFile();
+        if (dir.mkdirs() && new File(dir, name).createNewFile()) {
+            HeadlessNH.LOG.info("Created marker {} at {}", name, dir);
+            return;
+        }
+        HeadlessNH.LOG.error("Failed to create marker {} at {}", name, dir);
+
     }
 
     private static final Queue<Runnable> MAIN_THREAD_TASKS = new ConcurrentLinkedQueue<>();

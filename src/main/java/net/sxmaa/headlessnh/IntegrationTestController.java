@@ -8,8 +8,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.client.multiplayer.WorldClient;
 
 /**
  * Drives the client through the menus and world loads, writing marker files an external orchestrator can watch
@@ -46,7 +44,8 @@ public final class IntegrationTestController {
     public enum Mode {
         SINGLEPLAYER,
         MULTIPLAYER,
-        COMBINED
+        COMBINED,
+        NONE
     }
 
     private enum Stage {
@@ -70,12 +69,16 @@ public final class IntegrationTestController {
     public static Mode mode() {
         if (Boolean.getBoolean("headlessnh.combined")) return Mode.COMBINED;
         if (Boolean.getBoolean("headlessnh.singleplayer")) return Mode.SINGLEPLAYER;
-        return Mode.MULTIPLAYER;
+        return Mode.NONE;
     }
 
     private static Stage stage() {
         if (stage == null) {
-            stage = (mode() == Mode.SINGLEPLAYER) ? Stage.SINGLEPLAYER : Stage.MULTIPLAYER;
+            stage = switch (mode()) {
+                case MULTIPLAYER, COMBINED -> Stage.MULTIPLAYER;
+                case SINGLEPLAYER -> Stage.SINGLEPLAYER;
+                case NONE -> Stage.DONE;
+            };
         }
         return stage;
     }
@@ -158,6 +161,7 @@ public final class IntegrationTestController {
                     } else {
                         writeMarker(mc, markerWorldLoadedName());
                         stage = Stage.DONE;
+                        runOnMainThread(IntegrationTestController::disconnectAndAdvance);
                     }
                 }
                 break;
@@ -166,6 +170,7 @@ public final class IntegrationTestController {
                     singleplayerLoadHandled = true;
                     writeMarker(mc, markerWorldLoadedName());
                     stage = Stage.DONE;
+                    runOnMainThread(IntegrationTestController::disconnectAndAdvance);
                 }
                 break;
             default:
@@ -176,15 +181,19 @@ public final class IntegrationTestController {
     private static void disconnectAndAdvance() {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc != null) {
-            if (mc.theWorld != null) {
-                mc.theWorld.sendQuittingDisconnectingPacket();
-            }
-            mc.loadWorld((WorldClient) null);
-            mc.displayGuiScreen(new GuiMainMenu());
+            new Thread(() -> {
+                try {
+                    Thread.sleep(7500);
+                    mc.displayInGameMenu();
+
+                    // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer marker
+                    // while the server world is still loaded
+                    stage = Stage.SINGLEPLAYER;
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }).start();
         }
-        // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer marker while
-        // the server world is still loaded
-        stage = Stage.SINGLEPLAYER;
     }
 
     private static void writeMarker(Minecraft mc, String name) throws IOException {

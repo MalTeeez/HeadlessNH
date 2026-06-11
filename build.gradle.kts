@@ -9,5 +9,6 @@ minecraft {
         "-Dmixin.dumpTargetOnFailure=true",
         "-Dmixin.debug.verbose=true",
         "-Dheadlessnh.active=true",
+        "-Dheadlessnh.singleplayer=true",
     )
 }

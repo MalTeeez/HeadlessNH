@@ -12,7 +12,7 @@ public enum Mixins implements IMixins {
         new MixinBuilder()
             .setPhase(Phase.EARLY)
             .addClientMixins(
-                "MinecraftMixin_StartGame"
+                "MinecraftMixin"
             )),
     JOIN_WORLD_ON_MAINMENU_LOAD_CMM(
         new MixinBuilder()

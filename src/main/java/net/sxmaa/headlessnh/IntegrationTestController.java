@@ -155,18 +155,14 @@ public final class IntegrationTestController {
             case MULTIPLAYER:
                 if (!serverLoadHandled) {
                     serverLoadHandled = true;
-                    if (mode() == Mode.COMBINED) {
-                        writeMarker(mc, markerServerLoadedName());
-                        runOnMainThread(IntegrationTestController::disconnectAndAdvance);
-                    } else {
-                        writeMarker(mc, markerWorldLoadedName());
-                        stage = Stage.DONE;
-                        runOnMainThread(IntegrationTestController::disconnectAndAdvance);
-                    }
+                    writeMarker(mc, markerServerLoadedName());
+                    runOnMainThread(IntegrationTestController::disconnectAndAdvance);
                 }
                 break;
             case SINGLEPLAYER:
-                if (!singleplayerLoadHandled) {
+                // Only treat this as the singleplayer world load once we're actually in a singleplayer world; while
+                // the multiplayer server is being torn down render frames can still fire with stage == SINGLEPLAYER.
+                if (!singleplayerLoadHandled && mc.isSingleplayer()) {
                     singleplayerLoadHandled = true;
                     writeMarker(mc, markerWorldLoadedName());
                     stage = Stage.DONE;

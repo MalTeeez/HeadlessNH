@@ -115,7 +115,7 @@ public final class IntegrationTestController {
             menuMultiplayerTriggered = false;
             return;
         }
-        fail("could not connect to the server after " + (connectFailures - 1) + " attempts");
+        fail("could not connect to server after " + (connectFailures - 1) + " attempts");
     }
 
     public static void fail(String reason) {

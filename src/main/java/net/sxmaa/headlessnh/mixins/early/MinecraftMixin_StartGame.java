@@ -9,9 +9,8 @@ import net.minecraft.client.gui.GuiDisconnected;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiScreenServerList;
 import net.minecraft.client.gui.GuiSelectWorld;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.resources.I18n;
 import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,13 +29,10 @@ public class MinecraftMixin_StartGame {
     boolean headlessNH$triggeredWorldCreation = false;
 
     @Unique
-    boolean headlessNH$triggeredMultiplayerAddServer = false;
-
-    @Unique
-    boolean headlessNH$triggeredMultiplayerJoinServer = false;
-
-    @Unique
     boolean headlessNH$triggeredMultiplayer = false;
+
+    @Unique
+    boolean headlessNH$triggeredDirectConnect = false;
 
     @Inject(method = "runTick", at = @At("HEAD"))
     public void headlessNH$drainTasks(CallbackInfo ci) {
@@ -100,27 +96,25 @@ public class MinecraftMixin_StartGame {
             headlessNH$triggeredMultiplayer = true;
             new Thread(() -> {
                 try {
-                    if (!headlessNH$triggeredMultiplayerAddServer) {
-                        Thread.sleep(500);
-                        headlessNH$triggeredMultiplayerAddServer = true;
-                        IntegrationTestController.runOnMainThread(() -> {
-                            multiplayer.field_146806_v = true;
-                            multiplayer.field_146811_z = new ServerData(
-                                I18n.format("selectServer.defaultName", new Object[0]),
-                                "");
-                            multiplayer.field_146811_z.serverName = "locahost!";
-                            multiplayer.field_146811_z.serverIP = "127.0.0.1";
-                            multiplayer.confirmClicked(true, 0);
-                        });
-                    }
-                    if (!headlessNH$triggeredMultiplayerJoinServer) {
-                        Thread.sleep(500);
-                        headlessNH$triggeredMultiplayerJoinServer = true;
-                        IntegrationTestController.runOnMainThread(() -> multiplayer.func_146790_a(0));
-                        Thread.sleep(250);
-                        IntegrationTestController
-                            .runOnMainThread(() -> multiplayer.actionPerformed(multiplayer.field_146809_s));
-                    }
+                    Thread.sleep(500);
+                    IntegrationTestController
+                        .runOnMainThread(() -> { multiplayer.actionPerformed(new GuiButton(4, 0, 0, null)); });
+                } catch (InterruptedException e) {
+                    Thread.currentThread()
+                        .interrupt();
+                }
+            }).start();
+        } else if (guiScreenIn instanceof GuiScreenServerList serverList && !headlessNH$triggeredDirectConnect) {
+            headlessNH$triggeredDirectConnect = true;
+            new Thread(() -> {
+                try {
+                    IntegrationTestController
+                        .runOnMainThread(() -> { serverList.field_146302_g.setText("127.0.0.1"); });
+                    Thread.sleep(500);
+                    IntegrationTestController.runOnMainThread(() -> {
+                        serverList.field_146301_f.serverIP = "127.0.0.1";
+                        serverList.field_146303_a.confirmClicked(true, 0);
+                    });
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
@@ -134,7 +128,7 @@ public class MinecraftMixin_StartGame {
                     // Re-arm the join (without re-adding the server, to avoid duplicate list entries) in case we
                     // retry, then return to the title screen so the menu flow drives the next step
                     headlessNH$triggeredMultiplayer = false;
-                    headlessNH$triggeredMultiplayerJoinServer = false;
+                    headlessNH$triggeredDirectConnect = false;
                     IntegrationTestController.runOnMainThread(
                         () -> Minecraft.getMinecraft()
                             .displayGuiScreen(new GuiMainMenu()));

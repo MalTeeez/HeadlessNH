@@ -26,20 +26,20 @@ public final class IntegrationTestController {
     // Marker file names default to the constants above but can be overridden individually so an orchestrator can
     // pick its own filenames.
     private static String markerMainMenuName() {
-        return System.getProperty("headlessnh.marker.mainMenu", MARKER_MAIN_MENU);
+        return System.getProperty("headlessnh.marker.mainmenu", MARKER_MAIN_MENU);
     }
 
     private static String markerServerLoadedName() {
-        return System.getProperty("headlessnh.marker.serverLoaded", MARKER_SERVER_LOADED);
+        return System.getProperty("headlessnh.marker.serverloaded", MARKER_SERVER_LOADED);
     }
 
     private static String markerWorldLoadedName() {
-        return System.getProperty("headlessnh.marker.worldLoaded", MARKER_WORLD_LOADED);
+        return System.getProperty("headlessnh.marker.worldloaded", MARKER_WORLD_LOADED);
     }
 
     // Directory the marker files are written into; defaults to the Minecraft data dir when unset.
     private static File markerDir(Minecraft mc) {
-        String configured = System.getProperty("headlessnh.markerDir");
+        String configured = System.getProperty("headlessnh.markerdir");
         return (configured != null && !configured.isEmpty()) ? new File(configured) : mc.mcDataDir;
     }
 
@@ -189,12 +189,12 @@ public final class IntegrationTestController {
 
     private static void writeMarker(Minecraft mc, String name) throws IOException {
         File dir = markerDir(mc);
-        if (dir.mkdirs() && new File(dir, name).createNewFile()) {
+        dir.mkdirs();
+        if (new File(dir, name).createNewFile()) {
             HeadlessNH.LOG.info("Created marker {} at {}", name, dir);
             return;
         }
-        HeadlessNH.LOG.error("Failed to create marker {} at {}", name, dir);
-
+        throw new RuntimeException("Failed to create HeadlessNH marker \"" + name + "\" at " + dir);
     }
 
     private static final Queue<Runnable> MAIN_THREAD_TASKS = new ConcurrentLinkedQueue<>();

@@ -109,6 +109,26 @@ public final class IntegrationTestController {
         return Integer.getInteger("headlessnh.connectRetries", 5);
     }
 
+    // How long to stay in the multiplayer world after joining before tearing down and advancing, in milliseconds.
+    public static long serverJoinSettleMillis() {
+        return Long.getLong("headlessnh.delay.serverjoin", 7500L);
+    }
+
+    // How long to wait on the main menu before clicking the next button, in milliseconds.
+    public static long mainMenuSettleMillis() {
+        return Long.getLong("headlessnh.delay.mainmenu", 500L);
+    }
+
+    // How long to stay in the singleplayer world after loading before tearing down and advancing, in milliseconds.
+    public static long singleplayerSettleMillis() {
+        return Long.getLong("headlessnh.delay.singleplayer", 7500L);
+    }
+
+    // How long to wait after writing any marker before proceeding, in milliseconds.
+    public static long markerCooldownMillis() {
+        return Long.getLong("headlessnh.delay.cooldown", 0L);
+    }
+
     // Retries a failed connection attempt until connectRetryLimit() is hit, then fails
     public static synchronized void onConnectionFailed() {
         if (isActive() || stage() != Stage.MULTIPLAYER) return;
@@ -134,11 +154,24 @@ public final class IntegrationTestController {
         }
     }
 
+    private static boolean mainMenuMarkerWritten = false;
+
     public static void onGameStarted() throws IOException {
+        if (!isActive()) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mc != null) {
             writeMarker(mc, markerMainMenuName());
         }
+    }
+
+    public static synchronized boolean onMainMenuReached() throws IOException {
+        if (mainMenuMarkerWritten) return false;
+        mainMenuMarkerWritten = true;
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc != null) {
+            writeMarker(mc, markerMainMenuName());
+        }
+        return true;
     }
 
     public static void onWorldLoaded() throws IOException {
@@ -155,8 +188,7 @@ public final class IntegrationTestController {
             case MULTIPLAYER:
                 if (!serverLoadHandled) {
                     serverLoadHandled = true;
-                    writeMarker(mc, markerServerLoadedName());
-                    runOnMainThread(IntegrationTestController::disconnectAndAdvance);
+                    runOnMainThread(() -> disconnectAndAdvance(serverJoinSettleMillis(), markerServerLoadedName()));
                 }
                 break;
             case SINGLEPLAYER:
@@ -164,9 +196,8 @@ public final class IntegrationTestController {
                 // the multiplayer server is being torn down render frames can still fire with stage == SINGLEPLAYER.
                 if (!singleplayerLoadHandled && mc.isSingleplayer()) {
                     singleplayerLoadHandled = true;
-                    writeMarker(mc, markerWorldLoadedName());
                     stage = Stage.DONE;
-                    runOnMainThread(IntegrationTestController::disconnectAndAdvance);
+                    runOnMainThread(() -> disconnectAndAdvance(singleplayerSettleMillis(), markerWorldLoadedName()));
                 }
                 break;
             default:
@@ -174,18 +205,20 @@ public final class IntegrationTestController {
         }
     }
 
-    private static void disconnectAndAdvance() {
+    private static void disconnectAndAdvance(long settleMillis, String markerName) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc != null) {
             new Thread(() -> {
                 try {
-                    Thread.sleep(7500);
+                    Thread.sleep(settleMillis);
+                    writeMarker(mc, markerName);
+                    Thread.sleep(markerCooldownMillis());
                     mc.displayInGameMenu();
 
                     // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer marker
                     // while the server world is still loaded
                     stage = Stage.SINGLEPLAYER;
-                } catch (InterruptedException e) {
+                } catch (InterruptedException | IOException e) {
                     throw new RuntimeException(e);
                 }
             }).start();

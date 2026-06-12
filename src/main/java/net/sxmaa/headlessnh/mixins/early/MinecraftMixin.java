@@ -57,15 +57,7 @@ public class MinecraftMixin {
         headlessNH$finishedLoading = true;
         IntegrationTestController.onGameStarted();
         if (!headlessNH$reachedMainMenu) {
-            new Thread(() -> {
-                try {
-                    Thread.sleep(2500);
-                    IntegrationTestController.runOnMainThread(() -> changedScreen(this.currentScreen, null));
-                } catch (InterruptedException e) {
-                    Thread.currentThread()
-                        .interrupt();
-                }
-            }).start();
+            changedScreen(this.currentScreen, null);
         }
     }
 
@@ -76,7 +68,10 @@ public class MinecraftMixin {
             headlessNH$reachedMainMenu = true;
             new Thread(() -> {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(IntegrationTestController.mainMenuSettleMillis());
+                    if (IntegrationTestController.onMainMenuReached()) {
+                        Thread.sleep(IntegrationTestController.markerCooldownMillis());
+                    }
                     String action = IntegrationTestController.pollMainMenuAction();
                     if (action == null) return;
                     // Singleplayer is 1, Multiplayer is 2
@@ -86,6 +81,8 @@ public class MinecraftMixin {
                 } catch (InterruptedException e) {
                     Thread.currentThread()
                         .interrupt();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }).start();
         } else if (guiScreenIn instanceof GuiSelectWorld selectWorld && !headlessNH$triggeredWorldSelection) {

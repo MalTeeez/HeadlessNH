@@ -1,5 +1,7 @@
 package net.sxmaa.headlessnh.mixins.late;
 
+import java.io.IOException;
+
 import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Dynamic;
@@ -20,7 +22,10 @@ public class GuiCustomMixin {
         if (IntegrationTestController.isActive()) return;
         new Thread(() -> {
             try {
-                Thread.sleep(500);
+                Thread.sleep(IntegrationTestController.mainMenuSettleMillis());
+                if (IntegrationTestController.onMainMenuReached()) {
+                    Thread.sleep(IntegrationTestController.markerCooldownMillis());
+                }
                 String action = IntegrationTestController.pollMainMenuAction();
                 if (action == null) return;
                 IntegrationTestController
@@ -28,6 +33,8 @@ public class GuiCustomMixin {
             } catch (InterruptedException e) {
                 Thread.currentThread()
                     .interrupt();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }).start();
     }

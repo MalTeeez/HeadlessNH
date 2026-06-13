@@ -41,6 +41,32 @@ public final class IntegrationTestController {
         return (configured != null && !configured.isEmpty()) ? new File(configured) : mc.mcDataDir;
     }
 
+    // Optional gate files (resolved under the marker dir): when set the controller blocks after a stage's marker
+    // has been written until the gate file appears, letting an external orchestrator step the test forward one
+    // stage at a time. When unset the stage proceeds immediately.
+    private static @Nullable String gateMainMenuName() {
+        return emptyToNull(System.getProperty("headlessnh.gate.mainmenu"));
+    }
+
+    private static @Nullable String gateServerLoadedName() {
+        return emptyToNull(System.getProperty("headlessnh.gate.serverloaded"));
+    }
+
+    private static @Nullable String gateWorldLoadedName() {
+        return emptyToNull(System.getProperty("headlessnh.gate.worldloaded"));
+    }
+
+    // How long to wait for a gate file before failing the test, in milliseconds. 0 or negative waits forever.
+    public static long gateTimeoutMillis() {
+        return Long.getLong("headlessnh.gate.timeout", 0L);
+    }
+
+    private static final long GATE_POLL_INTERVAL_MILLIS = 250L;
+
+    private static @Nullable String emptyToNull(@Nullable String value) {
+        return (value != null && !value.isEmpty()) ? value : null;
+    }
+
     public enum Mode {
         SINGLEPLAYER,
         MULTIPLAYER,
@@ -141,6 +167,30 @@ public final class IntegrationTestController {
         fail("could not connect to server after " + (connectFailures - 1) + " attempts");
     }
 
+    public static void awaitMainMenuGate() throws InterruptedException {
+        awaitGate(gateMainMenuName());
+    }
+
+    // Returns false (and fails the test) only on timeout; true when the gate appears or isn't configured.
+    private static boolean awaitGate(@Nullable String gateName) throws InterruptedException {
+        if (gateName == null) return true;
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null) return true;
+        File gate = new File(markerDir(mc), gateName);
+        long timeout = gateTimeoutMillis();
+        long deadline = timeout > 0 ? System.currentTimeMillis() + timeout : Long.MAX_VALUE;
+        HeadlessNH.LOG.info("Waiting for gate file {}", gate);
+        while (!gate.exists()) {
+            if (System.currentTimeMillis() >= deadline) {
+                fail("timed out after " + timeout + "ms waiting for gate file " + gate);
+                return false;
+            }
+            Thread.sleep(GATE_POLL_INTERVAL_MILLIS);
+        }
+        HeadlessNH.LOG.info("Gate file {} appeared, proceeding", gate);
+        return true;
+    }
+
     public static void fail(String reason) {
         String message = "Integration test failed: " + reason;
         HeadlessNH.LOG.error(message);
@@ -188,7 +238,11 @@ public final class IntegrationTestController {
             case MULTIPLAYER:
                 if (!serverLoadHandled) {
                     serverLoadHandled = true;
-                    runOnMainThread(() -> disconnectAndAdvance(serverJoinSettleMillis(), markerServerLoadedName()));
+                    runOnMainThread(
+                        () -> disconnectAndAdvance(
+                            serverJoinSettleMillis(),
+                            markerServerLoadedName(),
+                            gateServerLoadedName()));
                 }
                 break;
             case SINGLEPLAYER:
@@ -197,7 +251,11 @@ public final class IntegrationTestController {
                 if (!singleplayerLoadHandled && mc.isSingleplayer()) {
                     singleplayerLoadHandled = true;
                     stage = Stage.DONE;
-                    runOnMainThread(() -> disconnectAndAdvance(singleplayerSettleMillis(), markerWorldLoadedName()));
+                    runOnMainThread(
+                        () -> disconnectAndAdvance(
+                            singleplayerSettleMillis(),
+                            markerWorldLoadedName(),
+                            gateWorldLoadedName()));
                 }
                 break;
             default:
@@ -205,7 +263,7 @@ public final class IntegrationTestController {
         }
     }
 
-    private static void disconnectAndAdvance(long settleMillis, String markerName) {
+    private static void disconnectAndAdvance(long settleMillis, String markerName, @Nullable String gateName) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc != null) {
             new Thread(() -> {
@@ -213,6 +271,10 @@ public final class IntegrationTestController {
                     Thread.sleep(settleMillis);
                     writeMarker(mc, markerName);
                     Thread.sleep(markerCooldownMillis());
+
+                    // Bail without advancing if the gate timed out (already reported as a failure).
+                    if (!awaitGate(gateName)) return;
+
                     mc.displayInGameMenu();
 
                     // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer marker

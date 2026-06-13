@@ -25,6 +25,7 @@ public class GuiCustomMixin {
                 Thread.sleep(IntegrationTestController.mainMenuSettleMillis());
                 if (IntegrationTestController.onMainMenuReached()) {
                     Thread.sleep(IntegrationTestController.markerCooldownMillis());
+                    IntegrationTestController.awaitMainMenuGate();
                 }
                 String action = IntegrationTestController.pollMainMenuAction();
                 if (action == null) return;

@@ -275,11 +275,13 @@ public final class IntegrationTestController {
                     // Bail without advancing if the gate timed out (already reported as a failure).
                     if (!awaitGate(gateName)) return;
 
-                    mc.displayInGameMenu();
+                    runOnMainThread(() -> {
+                        mc.displayInGameMenu();
 
-                    // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer marker
-                    // while the server world is still loaded
-                    stage = Stage.SINGLEPLAYER;
+                        // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer
+                        // marker while the server world is still loaded
+                        stage = Stage.SINGLEPLAYER;
+                    });
                 } catch (InterruptedException | IOException e) {
                     throw new RuntimeException(e);
                 }

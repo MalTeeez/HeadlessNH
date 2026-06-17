@@ -191,6 +191,54 @@ public final class IntegrationTestController {
         return true;
     }
 
+    // Logs each setting's resolved value and whether it came from a system property or the built-in default.
+    public static void logSettings() {
+        Minecraft mc = Minecraft.getMinecraft();
+        HeadlessNH.LOG.info("HeadlessNH settings:");
+        HeadlessNH.LOG.info("  automation: active={} mode={} stage={}", !isActive(), mode(), stage());
+        logBool("headlessnh.active");
+        logBool("headlessnh.combined");
+        logBool("headlessnh.singleplayer");
+        logInt("headlessnh.connectRetries", connectRetryLimit());
+        logMillis("headlessnh.delay.mainmenu", mainMenuSettleMillis());
+        logMillis("headlessnh.delay.serverjoin", serverJoinSettleMillis());
+        logMillis("headlessnh.delay.singleplayer", singleplayerSettleMillis());
+        logMillis("headlessnh.delay.cooldown", markerCooldownMillis());
+        logMillis("headlessnh.gate.timeout", gateTimeoutMillis());
+        logStr("headlessnh.markerdir", mc != null ? markerDir(mc).getPath() : "<unknown>");
+        logStr("headlessnh.marker.mainmenu", markerMainMenuName());
+        logStr("headlessnh.marker.serverloaded", markerServerLoadedName());
+        logStr("headlessnh.marker.worldloaded", markerWorldLoadedName());
+        logStr("headlessnh.gate.mainmenu", String.valueOf(gateMainMenuName()));
+        logStr("headlessnh.gate.serverloaded", String.valueOf(gateServerLoadedName()));
+        logStr("headlessnh.gate.worldloaded", String.valueOf(gateWorldLoadedName()));
+    }
+
+    private static void logBool(String key) {
+        logLine(key, String.valueOf(Boolean.getBoolean(key)));
+    }
+
+    private static void logInt(String key, int resolved) {
+        logLine(key, String.valueOf(resolved));
+    }
+
+    private static void logMillis(String key, long resolved) {
+        logLine(key, resolved + "ms");
+    }
+
+    private static void logStr(String key, String resolved) {
+        logLine(key, resolved);
+    }
+
+    private static void logLine(String key, String resolved) {
+        String raw = System.getProperty(key);
+        if (raw != null) {
+            HeadlessNH.LOG.info("  {} = {} (system property \"{}\")", key, resolved, raw);
+        } else {
+            HeadlessNH.LOG.info("  {} = {} (default)", key, resolved);
+        }
+    }
+
     public static void fail(String reason) {
         String message = "Integration test failed: " + reason;
         HeadlessNH.LOG.error(message);

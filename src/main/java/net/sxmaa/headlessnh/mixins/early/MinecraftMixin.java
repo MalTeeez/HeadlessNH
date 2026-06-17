@@ -55,6 +55,7 @@ public class MinecraftMixin {
     @Inject(method = "startGame", at = @At("TAIL"))
     public void atStartedGame(CallbackInfo ci) throws IOException {
         headlessNH$finishedLoading = true;
+        IntegrationTestController.logSettings();
         IntegrationTestController.onGameStarted();
         if (!headlessNH$reachedMainMenu) {
             changedScreen(this.currentScreen, null);

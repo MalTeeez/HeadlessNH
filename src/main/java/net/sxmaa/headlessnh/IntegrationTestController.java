@@ -88,6 +88,15 @@ public final class IntegrationTestController {
     private static boolean singleplayerLoadHandled = false;
     private static int connectFailures = 0;
 
+    // Only trigger when this is set, ignores any other reason why the pause menu might be open
+    private static volatile boolean teardownRequested = false;
+
+    public static synchronized boolean consumeTeardownRequest() {
+        boolean requested = teardownRequested;
+        teardownRequested = false;
+        return requested;
+    }
+
     public static boolean isActive() {
         return !Boolean.getBoolean("headlessnh.active");
     }
@@ -282,6 +291,9 @@ public final class IntegrationTestController {
             return;
         }
 
+        // Arm the settle timer off the player being in the world.
+        if (mc.thePlayer == null) return;
+
         switch (stage()) {
             case MULTIPLAYER:
                 if (!serverLoadHandled) {
@@ -316,6 +328,8 @@ public final class IntegrationTestController {
         if (mc != null) {
             new Thread(() -> {
                 try {
+                    HeadlessNH.LOG
+                        .info("Trigger reached for {}, settling {}ms before writing marker", markerName, settleMillis);
                     Thread.sleep(settleMillis);
                     writeMarker(mc, markerName);
                     Thread.sleep(markerCooldownMillis());
@@ -324,6 +338,7 @@ public final class IntegrationTestController {
                     if (!awaitGate(gateName)) return;
 
                     runOnMainThread(() -> {
+                        teardownRequested = true;
                         mc.displayInGameMenu();
 
                         // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer

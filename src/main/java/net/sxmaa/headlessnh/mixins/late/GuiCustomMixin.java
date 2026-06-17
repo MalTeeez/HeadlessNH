@@ -2,6 +2,7 @@ package net.sxmaa.headlessnh.mixins.late;
 
 import java.io.IOException;
 
+import net.sxmaa.headlessnh.HeadlessNH;
 import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Dynamic;
@@ -22,6 +23,8 @@ public class GuiCustomMixin {
         if (IntegrationTestController.isActive()) return;
         new Thread(() -> {
             try {
+                HeadlessNH.LOG
+                    .info("Main menu reached, settling {}ms", IntegrationTestController.mainMenuSettleMillis());
                 Thread.sleep(IntegrationTestController.mainMenuSettleMillis());
                 if (IntegrationTestController.onMainMenuReached()) {
                     Thread.sleep(IntegrationTestController.markerCooldownMillis());

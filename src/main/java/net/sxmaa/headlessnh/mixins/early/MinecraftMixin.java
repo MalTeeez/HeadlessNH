@@ -12,6 +12,7 @@ import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiScreenServerList;
 import net.minecraft.client.gui.GuiSelectWorld;
+import net.sxmaa.headlessnh.HeadlessNH;
 import net.sxmaa.headlessnh.IntegrationTestController;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -69,6 +70,8 @@ public class MinecraftMixin {
             headlessNH$reachedMainMenu = true;
             new Thread(() -> {
                 try {
+                    HeadlessNH.LOG
+                        .info("Main menu reached, settling {}ms", IntegrationTestController.mainMenuSettleMillis());
                     Thread.sleep(IntegrationTestController.mainMenuSettleMillis());
                     if (IntegrationTestController.onMainMenuReached()) {
                         Thread.sleep(IntegrationTestController.markerCooldownMillis());
@@ -160,6 +163,8 @@ public class MinecraftMixin {
                 }
             }).start();
         } else if (guiScreenIn instanceof GuiIngameMenu ingameMenu) {
+            // Only disconnect when we opened this menu as part of a teardown; ignore menus opened by anything else.
+            if (!IntegrationTestController.consumeTeardownRequest()) return;
             new Thread(() -> {
                 try {
                     Thread.sleep(500);

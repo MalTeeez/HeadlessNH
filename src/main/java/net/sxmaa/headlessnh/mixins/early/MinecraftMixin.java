@@ -163,8 +163,14 @@ public class MinecraftMixin {
                 }
             }).start();
         } else if (guiScreenIn instanceof GuiIngameMenu ingameMenu) {
-            // Only disconnect when we opened this menu as part of a teardown; ignore menus opened by anything else.
-            if (!IntegrationTestController.consumeTeardownRequest()) return;
+            // A menu we didn't open as part of a teardown would stall automation, so close it.
+            if (!IntegrationTestController.consumeTeardownRequest()) {
+                HeadlessNH.LOG.warn("In-game menu opened without a pending teardown request, closing it");
+                IntegrationTestController.runOnMainThread(
+                    () -> Minecraft.getMinecraft()
+                        .displayGuiScreen(null));
+                return;
+            }
             new Thread(() -> {
                 try {
                     Thread.sleep(500);

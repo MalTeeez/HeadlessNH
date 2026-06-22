@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiIngameMenu;
 
 /**
  * Drives the client through the menus and world loads, writing marker files an external orchestrator can watch
@@ -88,7 +89,7 @@ public final class IntegrationTestController {
     private static boolean singleplayerLoadHandled = false;
     private static int connectFailures = 0;
 
-    // Only trigger when this is set, ignores any other reason why the pause menu might be open
+    // Tracks whether we expect the in-game menu to open; only a menu seen while this is set drives a teardown.
     private static volatile boolean teardownRequested = false;
 
     public static synchronized boolean consumeTeardownRequest() {
@@ -339,7 +340,9 @@ public final class IntegrationTestController {
 
                     runOnMainThread(() -> {
                         teardownRequested = true;
-                        mc.displayInGameMenu();
+                        // displayInGameMenu() no-ops when a screen is already open, so open the menu directly to
+                        // guarantee the teardown fires even if a stray menu was already up.
+                        mc.displayGuiScreen(new GuiIngameMenu());
 
                         // Flip the stage only after teardown, so a stray render frame can't emit the singleplayer
                         // marker while the server world is still loaded

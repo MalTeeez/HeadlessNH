@@ -34,7 +34,12 @@ public enum Mixins implements IMixins {
             .addRequiredMod(TargetedMod.ANGELICA)
             .addClientMixins(
                 "CeleritasWorldRendererMixin"
-            ))
+            )),
+    PREVENT_OUT_OF_FOCUS(
+        new MixinBuilder()
+            .setPhase(Phase.EARLY)
+            .addClientMixins("EntityRendererMixin")
+    )
     ;
     // spotless:on
 

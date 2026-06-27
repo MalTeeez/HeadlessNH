@@ -10,5 +10,6 @@ minecraft {
         "-Dmixin.debug.verbose=true",
         "-Dheadlessnh.active=true",
         "-Dheadlessnh.singleplayer=true",
+        "-Dheadlessnh.forcefocus=true",
     )
 }

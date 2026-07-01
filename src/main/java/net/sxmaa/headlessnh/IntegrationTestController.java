@@ -284,7 +284,10 @@ public final class IntegrationTestController {
 
     public static void onWorldLoaded() throws IOException {
         Minecraft mc = Minecraft.getMinecraft();
-        if (mc == null || mc.theWorld == null) return;
+        if (mc == null || mc.theWorld == null) {
+            HeadlessNH.LOG.info("onWorldLoaded ignored: no client or world yet");
+            return;
+        }
 
         // Not driving the menus: keep the original behaviour of signalling every world load.
         if (isActive()) {
@@ -292,34 +295,42 @@ public final class IntegrationTestController {
             return;
         }
 
-        // Arm the settle timer off the player being in the world.
-        if (mc.thePlayer == null) return;
-
         switch (stage()) {
             case MULTIPLAYER:
-                if (!serverLoadHandled) {
-                    serverLoadHandled = true;
-                    runOnMainThread(
-                        () -> disconnectAndAdvance(
-                            serverJoinSettleMillis(),
-                            markerServerLoadedName(),
-                            gateServerLoadedName()));
+                if (serverLoadHandled) break;
+                if (mc.thePlayer == null) {
+                    HeadlessNH.LOG.info("onWorldLoaded ignored: player not in the world yet");
+                    break;
                 }
+                serverLoadHandled = true;
+                runOnMainThread(
+                    () -> disconnectAndAdvance(
+                        serverJoinSettleMillis(),
+                        markerServerLoadedName(),
+                        gateServerLoadedName()));
                 break;
             case SINGLEPLAYER:
-                // Only treat this as the singleplayer world load once we're actually in a singleplayer world; while
-                // the multiplayer server is being torn down render frames can still fire with stage == SINGLEPLAYER.
-                if (!singleplayerLoadHandled && mc.isSingleplayer()) {
-                    singleplayerLoadHandled = true;
-                    stage = Stage.DONE;
-                    runOnMainThread(
-                        () -> disconnectAndAdvance(
-                            singleplayerSettleMillis(),
-                            markerWorldLoadedName(),
-                            gateWorldLoadedName()));
+                if (singleplayerLoadHandled) break;
+                if (mc.thePlayer == null) {
+                    HeadlessNH.LOG.info("onWorldLoaded ignored: player not in the world yet");
+                    break;
                 }
+                // While the multiplayer server is being torn down, render frames can still fire with
+                // stage == SINGLEPLAYER before we're actually in a singleplayer world.
+                if (!mc.isSingleplayer()) {
+                    HeadlessNH.LOG.info("onWorldLoaded ignored: not in a singleplayer world yet");
+                    break;
+                }
+                singleplayerLoadHandled = true;
+                stage = Stage.DONE;
+                runOnMainThread(
+                    () -> disconnectAndAdvance(
+                        singleplayerSettleMillis(),
+                        markerWorldLoadedName(),
+                        gateWorldLoadedName()));
                 break;
             default:
+                HeadlessNH.LOG.info("onWorldLoaded ignored: stage {} has no world-load handling", stage());
                 break;
         }
     }
